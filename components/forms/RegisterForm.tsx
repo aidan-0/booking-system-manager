@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import CustomFormField from "../CustomFormField";
 import SubmitButton from "../SubmitButton";
 import { useState } from "react";
-import { UserFormValidation } from "@/lib/validation";
+import { PatientFormValidation } from "@/lib/validation";
 import { useRouter } from "next/navigation";
-import { createUser } from "@/lib/actions/patient.actions";
+import { createUser, registerPatient } from "@/lib/actions/patient.actions";
 import { FormFieldType } from "./PatientForm";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Doctors, GenderOptions, IdentificationTypes } from "@/constants";
+import { Doctors, GenderOptions, IdentificationTypes, PatientFormDefaultValues } from "@/constants";
 import { Label } from "@radix-ui/react-label";
 import { SelectItem } from "../ui/select";
 import Image from "next/image";
@@ -25,9 +25,10 @@ const RegisterForm = ({ user }: { user: User }) => {
 	const [isLoading, setIsLoading] = useState(false);
 
 	// Define a form using the `useForm` hook.
-	const form = useForm<z.infer<typeof UserFormValidation>>({
-		resolver: zodResolver(UserFormValidation),
+	const form = useForm<z.infer<typeof PatientFormValidation>>({
+		resolver: zodResolver(PatientFormValidation),
 		defaultValues: {
+			...PatientFormDefaultValues,
 			name: "",
 			email: "",
 			phone: "",
@@ -35,31 +36,35 @@ const RegisterForm = ({ user }: { user: User }) => {
 	});
 
 	// Define a function to handle form submission.
-	async function onSubmit({
-		name,
-		email,
-		phone,
-	}: z.infer<typeof UserFormValidation>) {
+	async function onSubmit(values: z.infer<typeof PatientFormValidation>) {
 		setIsLoading(true);
 
+		let formData;
+
+		if(values.identificationDocument && values.identificationDocument.length > 0) {
+			const blobFile = new Blob([values.identificationDocument[0]], { type: values.identificationDocument[0].type });
+
+			formData = new FormData();
+			formData.append("blobFile", blobFile);
+			formData.append('fileName', values.identificationDocument[0].name);
+		}
+
+
 		try {
-			const userData = {
-				name,
-				email,
-				phone,
-			};
-
-			const user = await createUser(userData);
-
-			if (user) {
-				console.log("user exists", user);
-				router.push(`/patients/${user.$id}/register`); //update 'patients' to something else when refactoring
+			const patientData = {
+				...values,
+				userId: user.$id,
+				birthDate: new Date(values.birthDate),
+				identificationDocument: formData,
 			}
+
+			// @ts-ignore
+			const patient = await registerPatient(patientData);
+
+			if(patient) router.push(`/patients/${user.$id}/new-appointment`)
 		} catch (error) {
 			console.log(error);
 		}
-
-		// console.log(name, email, phone);
 	}
 
 	return (
