@@ -194,6 +194,10 @@
     @apply border border-dark-500 cursor-pointer bg-dark-400 text-white !important;
   }
 
+  .shad-gray-btn:hover {
+    @apply  bg-dark-500 !important;
+  }
+
   .shad-input-label {
     @apply text-14-medium text-dark-700 !important;
   }
